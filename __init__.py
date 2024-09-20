@@ -483,7 +483,6 @@ class MP_OT_FollowPath(Operator, ImportHelper):
 
     def execute(self, context):
         bpy.ops.extensions.package_install(repo_index=0, pkg_id="curve_tools")
-        bpy.ops.preferences.addon_enable(module="curve_tools")
         current_frame = bpy.context.scene.frame_current
         obj = bpy.context.active_object
     
@@ -638,8 +637,6 @@ class MP_OT_FollowPath(Operator, ImportHelper):
         
         bpy.context.scene.frame_set(current_frame)
         bpy.ops.object.mode_set(mode='OBJECT')
-        
-        bpy.ops.preferences.addon_disable(module="curve_tools")
         
         if anim_action_name in bpy.data.actions:
             bpy.data.actions.remove(bpy.data.actions[anim_action_name])
