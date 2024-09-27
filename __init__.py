@@ -2,7 +2,7 @@ bl_info = {
     'name': 'Multi Purpose',
     'author': 'Yazılımcı Genç',
     'description': "Bismillah! Blender'da işlerimizi kolaylaştırmak amacıyla yazılmıştır.",
-    'blender': (3, 0),
+    'blender': (4, 0, 2),
     'version': (1, 0, 1),
     'location': 'View3D > Sidebar > Multi Purpose',
     'warning': '',
@@ -482,7 +482,7 @@ class MP_OT_FollowPath(Operator, ImportHelper):
     filepath: StringProperty(subtype="FILE_PATH")
 
     def execute(self, context):
-        bpy.ops.preferences.addon_enable(module="curve_tools")
+        bpy.ops.preferences.addon_enable(module="bl_ext.blender_org.curve_tools")
         current_frame = bpy.context.scene.frame_current
         obj = bpy.context.active_object
     
@@ -638,10 +638,10 @@ class MP_OT_FollowPath(Operator, ImportHelper):
         bpy.context.scene.frame_set(current_frame)
         bpy.ops.object.mode_set(mode='OBJECT')
         
+        bpy.ops.preferences.addon_disable(module="bl_ext.blender_org.curve_tools")
+        
         if anim_action_name in bpy.data.actions:
             bpy.data.actions.remove(bpy.data.actions[anim_action_name])
-            
-        bpy.ops.preferences.addon_disable(module="curve_tools")
         
         return {'FINISHED'}
     
