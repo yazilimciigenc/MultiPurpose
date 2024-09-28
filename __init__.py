@@ -3,7 +3,7 @@ bl_info = {
     'author': 'Yazılımcı Genç',
     'description': "Bismillah! Blender'da işlerimizi kolaylaştırmak amacıyla yazılmıştır.",
     'blender': (4, 0, 2),
-    'version': (1, 0, 3),
+    'version': (1, 0, 4),
     'location': 'View3D > Sidebar > Multi Purpose',
     'warning': '',
     'wiki_url': "",
@@ -492,6 +492,8 @@ class MP_OT_FollowPath(Operator, ImportHelper):
     filepath: StringProperty(subtype="FILE_PATH")
 
     def execute(self, context):
+        bpy.ops.extensions.package_install(repo_index=0, pkg_id="curve_tools")
+        
         bpy.ops.preferences.addon_enable(module="bl_ext.blender_org.curve_tools")
         current_frame = bpy.context.scene.frame_current
         obj = bpy.context.active_object
@@ -1014,8 +1016,6 @@ def register():
     bpy.types.DOPESHEET_HT_header.append(draw_header)
 
     bpy.utils.register_class(DemoPreferences)
-    
-    bpy.ops.extensions.package_install(repo_index=0, pkg_id="curve_tools")
     
 def unregister():
 
