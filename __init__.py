@@ -3,7 +3,7 @@ bl_info = {
     'author': 'Yazılımcı Genç',
     'description': "Bismillah! Blender'da işlerimizi kolaylaştırmak amacıyla yazılmıştır.",
     'blender': (4, 0, 2),
-    'version': (1, 0, 2),
+    'version': (1, 0, 3),
     'location': 'View3D > Sidebar > Multi Purpose',
     'warning': '',
     'wiki_url': "",
@@ -56,13 +56,23 @@ class MP_OT_FindFilePaths(Operator):
     def execute(self, context):
         folder_path = self.directory
         
-        for library in bpy.data.libraries:
-            file_name = library.filepath.split("\\")[-1]
-            if file_existing(folder_path, file_name):
-                library.filepath = os.path.join(folder_path, file_name)
-        
-        bpy.ops.wm.save_mainfile()
-        bpy.ops.wm.revert_mainfile()
+        if "Animasyon Kütüphanesi" not in folder_path:
+            self.report({'WARNING'}, "Animasyon Kütüphanesi isimli klasoru seciniz!")
+        else:
+            for library in bpy.data.libraries:
+                
+                file_path = library.filepath
+                file_name = os.path.basename(file_path)
+                
+                
+                result = find_file(folder_path, file_name)
+                
+                if result:
+                    library.filepath = result
+                else:
+                    print("Dosya bulunamadı.")
+            bpy.ops.wm.save_mainfile()
+            bpy.ops.wm.revert_mainfile()
         
         return {'FINISHED'}
 
