@@ -39,9 +39,11 @@ class MP_PT_LinkOperations(Panel):
         
         layout.operator("mp.relations_make", text="Shape Keys Aktif Et", icon="SHAPEKEY_DATA")
 
-def file_existing(path, file_name):
-    file_path = os.path.join(path, file_name)
-    return os.path.isfile(file_path)
+def find_file(folder_path, file_name):
+    for root, dirs, files in os.walk(folder_path):
+        if file_name in files:
+            return os.path.join(root, file_name)
+    return None
 
 class MP_OT_FindFilePaths(Operator):
     bl_idname = "mp.find_file_paths"
@@ -63,7 +65,6 @@ class MP_OT_FindFilePaths(Operator):
                 
                 file_path = library.filepath
                 file_name = os.path.basename(file_path)
-                
                 
                 result = find_file(folder_path, file_name)
                 
