@@ -3,7 +3,7 @@ bl_info = {
     'author': 'Yazılımcı Genç',
     'description': "Bismillah! Blender'da işlerimizi kolaylaştırmak amacıyla yazılmıştır.",
     'blender': (4, 0, 0),
-    'version': (1, 0, 9),
+    'version': (1, 1, 0),
     'location': 'View3D > Sidebar > Multi Purpose',
     'warning': '',
     'wiki_url': "",
@@ -18,6 +18,7 @@ from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper
 import os
 import re
+from . import addon_updater_ops
 
 ############################ Link Operations ############################
 
@@ -976,7 +977,7 @@ classes = (
     # Scripting Settings
     MP_PT_Scripting_Settings, MP_MT_RunScript, MP_OT_ConfirmRunScript
 )
-"""
+
 @addon_updater_ops.make_annotations
 class DemoPreferences(bpy.types.AddonPreferences):
 	
@@ -1020,28 +1021,28 @@ class DemoPreferences(bpy.types.AddonPreferences):
 		layout = self.layout
 		addon_updater_ops.update_settings_ui(self, context)
 
-"""
+
 def register():
 
-    #addon_updater_ops.register(bl_info)
+    addon_updater_ops.register(bl_info)
 
     for cls in classes:
         bpy.utils.register_class(cls)
         
     bpy.types.DOPESHEET_HT_header.append(draw_header)
 
-    #bpy.utils.register_class(DemoPreferences)
+    bpy.utils.register_class(DemoPreferences)
     
 def unregister():
 
-    #addon_updater_ops.unregister()
+    addon_updater_ops.unregister()
 
     for cls in classes:
         bpy.utils.unregister_class(cls)
 
     bpy.types.DOPESHEET_HT_header.remove(draw_header)
 
-    #bpy.utils.unregister_class(DemoPreferences)
+    bpy.utils.unregister_class(DemoPreferences)
     
 if __name__ == "__main__":
     register()
