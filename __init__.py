@@ -3,7 +3,7 @@ bl_info = {
     'author': 'Yazılımcı Genç',
     'description': "Bismillah! Blender'da işlerimizi kolaylaştırmak amacıyla yazılmıştır.",
     'blender': (4, 0, 0),
-    'version': (1, 0, 8),
+    'version': (1, 0, 9),
     'location': 'View3D > Sidebar > Multi Purpose',
     'warning': '',
     'wiki_url': "",
@@ -18,7 +18,6 @@ from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper
 import os
 import re
-from . import addon_updater_ops
 
 ############################ Link Operations ############################
 
@@ -875,7 +874,7 @@ class MP_OT_DeleteAction(Operator):
         self.report({'INFO'}, f'"{self.action}" isimli action silindi!')
         return {'FINISHED'}
 
-class MP_OT_ActionEditorHeader(bpy.types.Operator):
+class MP_OT_ActionEditorHeader(Operator):
     bl_idname = "mp.action_editor_header_menu"
     bl_label = "Action Editor Header Menu"
 
@@ -883,10 +882,26 @@ class MP_OT_ActionEditorHeader(bpy.types.Operator):
         bpy.ops.wm.call_menu(name="mp.delete_actions_menu")
         return {'FINISHED'}
 
+class MP_OT_DeleteAllActionAssets(Operator):
+    bl_idname = "mp.delete_action_assets"
+    bl_label = "Asset actionları silinecek. Onaylıyor musunuz?"
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_confirm(self, event)
+
+    def execute(self, context):
+        actions_to_remove = [action for action in bpy.data.actions if action.asset_data is not None]
+        for action in actions_to_remove:
+            bpy.data.actions.remove(action)
+        self.report({'INFO'}, f"{len(actions_to_remove)} tane action asset silindi.")
+        return {'FINISHED'}
+
 def draw_header(self, context):
     if context.space_data.mode == 'ACTION':
         layout = self.layout
         layout.operator("mp.action_editor_header_menu", text="Action Sil", icon="DOWNARROW_HLT")
+        layout.operator("mp.delete_action_assets", text="Asset Actionları Sil", icon='TRASH')
+
 
 ########### Scripting Settings ###########
 
@@ -956,15 +971,15 @@ classes = (
     
     # Action Editor Operations
     MP_MT_DeleteActionsMenu, MP_OT_DeleteActionConfirm, MP_OT_DeleteAction, 
-    MP_OT_ActionEditorHeader,
+    MP_OT_ActionEditorHeader, MP_OT_DeleteAllActionAssets,
     
     # Scripting Settings
     MP_PT_Scripting_Settings, MP_MT_RunScript, MP_OT_ConfirmRunScript
 )
-
+"""
 @addon_updater_ops.make_annotations
 class DemoPreferences(bpy.types.AddonPreferences):
-	"""Demo bare-bones preferences"""
+	
 	bl_idname = __package__
 
 	# Addon updater preferences.
@@ -1005,28 +1020,28 @@ class DemoPreferences(bpy.types.AddonPreferences):
 		layout = self.layout
 		addon_updater_ops.update_settings_ui(self, context)
 
-
+"""
 def register():
 
-    addon_updater_ops.register(bl_info)
+    #addon_updater_ops.register(bl_info)
 
     for cls in classes:
         bpy.utils.register_class(cls)
         
     bpy.types.DOPESHEET_HT_header.append(draw_header)
 
-    bpy.utils.register_class(DemoPreferences)
+    #bpy.utils.register_class(DemoPreferences)
     
 def unregister():
 
-    addon_updater_ops.unregister()
+    #addon_updater_ops.unregister()
 
     for cls in classes:
         bpy.utils.unregister_class(cls)
 
     bpy.types.DOPESHEET_HT_header.remove(draw_header)
 
-    bpy.utils.unregister_class(DemoPreferences)
+    #bpy.utils.unregister_class(DemoPreferences)
     
 if __name__ == "__main__":
     register()
