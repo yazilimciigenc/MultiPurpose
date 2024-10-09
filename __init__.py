@@ -35,9 +35,9 @@ class MP_PT_LinkOperations(Panel):
         
         layout.operator("mp.find_file_paths", text="Dosyaları Bul", icon="FILE_FOLDER")
         
-        layout.operator("mp.MP_OT_KarakterRigi", text="Karakter Rigi Aktif Et", icon="ARMATURE_DATA")
+        layout.operator("mp.karakter_rigi", text="Karakter Rigi Aktif Et", icon="ARMATURE_DATA")
         
-        layout.operator("mp.MP_OT_ModelRigi", text="Model Rigi Aktif Et", icon="OBJECT_DATA")
+        layout.operator("mp.model_rigi", text="Model Rigi Aktif Et", icon="OBJECT_DATA")
         
         layout.operator("mp.relations_make", text="Shape Keys Aktif Et", icon="SHAPEKEY_DATA")
 
@@ -84,7 +84,7 @@ class MP_OT_FindFilePaths(Operator):
         return {'RUNNING_MODAL'}
 
 class MP_OT_KarakterRigi(Operator):
-    bl_idname = "mp.library_make"
+    bl_idname = "mp.karakter_rigi"
     bl_label = "Karakter Rigi Aktif Et"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -114,7 +114,7 @@ class MP_OT_KarakterRigi(Operator):
         return {'FINISHED'}
     
 class MP_OT_ModelRigi(Operator):
-    bl_idname = "mp.library_make"
+    bl_idname = "mp.model_rigi"
     bl_label = "Model Rigi Aktif Et"
     bl_options = {'REGISTER', 'UNDO'}
 
