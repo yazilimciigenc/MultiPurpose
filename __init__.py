@@ -3,7 +3,7 @@ bl_info = {
     'author': 'Yazılımcı Genç',
     'description': "Bismillah! Blender'da işlerimizi kolaylaştırmak amacıyla yazılmıştır.",
     'blender': (4, 0, 0),
-    'version': (1, 1, 1),
+    'version': (1, 1, 2),
     'location': 'View3D > Sidebar > Multi Purpose',
     'warning': '',
     'wiki_url': "",
@@ -81,9 +81,9 @@ class MP_OT_FindFilePaths(Operator):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
-class MP_OT_LibraryMake(Operator):
+class MP_OT_KarakterRigi(Operator):
     bl_idname = "mp.library_make"
-    bl_label = "Rigi Aktif Et"
+    bl_label = "Karakter Rigi Aktif Et"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -106,6 +106,22 @@ class MP_OT_LibraryMake(Operator):
                     
                     bpy.ops.object.make_local(type='SELECT_OBJECT')
                     break
+        except:
+            pass
+        
+        return {'FINISHED'}
+    
+class MP_OT_ModelRigi(Operator):
+    bl_idname = "mp.library_make"
+    bl_label = "Model Rigi Aktif Et"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        try:
+            selected_objects = bpy.context.selected_objects
+            object_name = selected_objects[0].name.split()[0]
+            
+            bpy.ops.object.make_override_library()
         except:
             pass
         
@@ -965,7 +981,7 @@ class MP_OT_ConfirmRunScript(Operator):
     
 classes = (
     # Link Operations
-    MP_PT_LinkOperations, MP_OT_FindFilePaths, MP_OT_LibraryMake, MP_OT_RelationsMake,
+    MP_PT_LinkOperations, MP_OT_FindFilePaths, MP_OT_KarakterRigi, MP_OT_ModelRigi, MP_OT_RelationsMake,
     
     # Animation Operations
     #MP_PT_AnimationOperations, MP_OT_WalkingStraight, MP_OT_CreatePath, 
