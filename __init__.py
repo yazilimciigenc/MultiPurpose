@@ -35,9 +35,9 @@ class MP_PT_LinkOperations(Panel):
         
         layout.operator("mp.find_file_paths", text="Dosyaları Bul", icon="FILE_FOLDER")
         
-        layout.operator("MP_OT_KarakterRigi", text="Karakter Rigi Aktif Et", icon="ARMATURE_DATA")
+        layout.operator("mp.MP_OT_KarakterRigi", text="Karakter Rigi Aktif Et", icon="ARMATURE_DATA")
         
-        layout.operator("MP_OT_ModelRigi", text="Model Rigi Aktif Et", icon="OBJECT_DATA")
+        layout.operator("mp.MP_OT_ModelRigi", text="Model Rigi Aktif Et", icon="OBJECT_DATA")
         
         layout.operator("mp.relations_make", text="Shape Keys Aktif Et", icon="SHAPEKEY_DATA")
 
