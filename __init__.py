@@ -2,13 +2,13 @@ bl_info = {
     'name': 'Multi Purpose',
     'author': 'Yazılımcı Genç',
     'description': "Bismillah! Blender'da işlerimizi kolaylaştırmak amacıyla yazılmıştır.",
-    'blender': (4, 0, 0),
-    'version': (1, 1, 4),
+    'blender': (4, 2, 0),
+    'version': (1, 1, 5),
     'location': 'View3D > Sidebar > Multi Purpose',
     'warning': '',
     'wiki_url': "",
     'tracker_url': "",
-    'category': 'Interface'
+    'category': 'Animation'
 }
 
 import bpy
@@ -35,11 +35,16 @@ class MP_PT_LinkOperations(Panel):
         
         layout.operator("mp.find_file_paths", text="Dosyaları Bul", icon="FILE_FOLDER")
         
-        layout.operator("mp.karakter_rigi", text="Karakter Rigi Aktif Et", icon="ARMATURE_DATA")
+        layout.separator()
         
-        layout.operator("mp.model_rigi", text="Model Rigi Aktif Et", icon="OBJECT_DATA")
-        
-        layout.operator("mp.relations_make", text="Shape Keys Aktif Et", icon="SHAPEKEY_DATA")
+        layout.prop(context.scene, "link_tabs", expand=True)
+
+        if context.scene.link_tabs == 'TAB1':
+            layout.operator("mp.karakter_rigi", text="Karakter Rigi Aktif Et", icon="ARMATURE_DATA")
+        elif context.scene.link_tabs == 'TAB2':
+            layout.operator("mp.model_rigi", text="Model Rigi Aktif Et", icon="OBJECT_DATA")
+        elif context.scene.link_tabs == 'TAB3':
+            layout.operator("mp.relations_make", text="Shape Keys Aktif Et", icon="SHAPEKEY_DATA")
 
 def find_file(folder_path, file_name):
     for root, dirs, files in os.walk(folder_path):
@@ -150,7 +155,7 @@ class MP_OT_RelationsMake(Operator):
     
 ############################ Animation Operations ############################
 
-"""class MP_PT_AnimationOperations(Panel):
+class MP_PT_AnimationOperations(Panel):
     bl_label = "Animasyon"
     bl_idname = "mp.animation_operations"
     bl_space_type = 'VIEW_3D'
@@ -161,18 +166,26 @@ class MP_OT_RelationsMake(Operator):
         layout = self.layout
         layout.scale_y = 1.2
         
-        layout.operator("mp.walking_straight", text="Düz Yürüme Döngüsü", icon="CON_LOCLIMIT")
-        
-        layout.separator()
-        
-        layout.operator("mp.create_path", text="Karaktere Path Ekle", icon="OUTLINER_OB_CURVE")
-        layout.operator("mp.follow_path", text="Path'e Bağla", icon="CON_ROTLIMIT")
-        layout.operator("mp.break_path", text="Path'den Ayrıl", icon="FORCE_CURVE")
-    
-        layout.separator()
-    
-        layout.operator("mp.root_move", text="Root'u Karaktere Getir", icon="ORIENTATION_CURSOR")
+        layout.prop(context.scene, "animation_tabs", expand=True)
 
+        if context.scene.animation_tabs == 'TAB1':
+            row1 = layout.row()
+            row1.operator("mp.walking_straight", text="", icon="ACTION")
+            row1.menu("mp.action_menu", text="Action Seciniz")
+            
+        elif context.scene.animation_tabs == 'TAB2':
+            row2 = layout.row()
+            row2.operator("mp.create_path", text="Path Ekle", icon="OUTLINER_OB_CURVE")
+            row2.operator("mp.break_path", text="Pathten Ayrıl", icon="FORCE_CURVE")
+            
+            row3 = layout.row()
+            row3.operator("mp.walking_straight", text="", icon="ACTION")
+            row3.menu("mp.action_menu", text="Action Seciniz")
+            
+        elif context.scene.animation_tabs == 'TAB3':
+            layout.operator("mp.root_move", text="Root'u Karaktere Getir", icon="ORIENTATION_CURSOR")
+
+character_actions = []
 class MP_OT_WalkingStraight(Operator, ImportHelper):
     bl_idname = "mp.walking_straight"
     bl_label = "Düz Yürüme"
@@ -180,146 +193,219 @@ class MP_OT_WalkingStraight(Operator, ImportHelper):
     filepath: StringProperty(subtype="FILE_PATH")
 
     def execute(self, context):
-        current_frame = bpy.context.scene.frame_current
-        obj = bpy.context.active_object
     
-        if obj.type != "ARMATURE":
-            return {'CANCELLED'}
-        else:
-            armature = obj.data
-            
-        for a in obj.data.bones:
-            a.select = False
-        
-        if 'root' in obj.pose.bones:
-            bone = obj.pose.bones['root']
-        else:
-            for bone in obj.pose.bones:
-                if bone.name.startswith("root") and len(bone.name) > 4:
-                    bone = obj.pose.bones[bone.name]
-                    break
-            else:
-                return {'CANCELLED'}
-            
-        first_locations = bone.location[:]
-        if len(bone.rotation_mode) == 3:
-            first_rotations = bone.rotation_euler[:]
-        elif bone.rotation_mode == "QUATERNION":
-            first_rotations = bone.rotation_quaternion[:]
-        first_scales = bone.scale[:]
-            
-        if obj.animation_data.action is not None:
-            current_action = obj.animation_data.action
-        else:
-            actions_list = [i.name for i in bpy.data.actions]
-            count = 1
-            temp_name = "New Action"
-            while temp_name in actions_list:
-                temp_name = "New Action " + str(count)
-                count += 1
-            bpy.data.actions.new(name=temp_name)
-            current_action = bpy.data.actions[temp_name]
-            obj.animation_data.action = current_action
+        global character_actions
+        if len(character_actions) > 0:
+            for act in character_actions:
+                if act in bpy.data.actions:
+                    bpy.data.actions.remove(bpy.data.actions[act])
+        character_actions = []
         
         with bpy.data.libraries.load(self.filepath, link=False) as (data_from, data_to):
             for action in data_from.actions:
-                anim_action_name = action
-                data_to.actions.append(action)
+                if "Yürüme Döngüsü" in action:
+                    data_to.actions.append(action)
+                    character_actions.append(action)
+                
+        return {'FINISHED'}
+
+def duz_yurume_uygula(act_name):
+    
+    anim_action_name = act_name
+    if anim_action_name in bpy.data.actions:
+        anim_action = bpy.data.actions[anim_action_name]
+    
+    current_frame = bpy.context.scene.frame_current
+    obj = bpy.context.active_object
+
+    if obj.type != "ARMATURE":
+        return {'CANCELLED'}
+    else:
+        armature = obj.data
+        
+    for a in obj.data.bones:
+        a.select = False
+    
+    if 'root' in obj.pose.bones:
+        bone = obj.pose.bones['root']
+    else:
+        for bone in obj.pose.bones:
+            if bone.name.startswith("root") and len(bone.name) > 4:
+                bone = obj.pose.bones[bone.name]
                 break
-
-        if anim_action_name in bpy.data.actions:
-            anim_action = bpy.data.actions[anim_action_name]
-        
-        obj.animation_data.action = anim_action
-            
-        armature.collections_all["Root"].is_visible = True
-        bpy.ops.object.mode_set(mode='POSE')
-        
-        pose_bone = obj.pose.bones.get(bone.name)  
-        bpy.ops.pose.select_all(action='DESELECT')
-        obj.data.bones[bone.name].select = True
-        obj.data.bones.active = obj.data.bones[bone.name]
-            
-        bpy.context.scene.frame_set(1)
-        loc_y_1 = obj.pose.bones["foot_ik.L"].location[1]
-        loc_y_1 = abs(round(loc_y_1, 6))
-        
-        last_frame = max([keyframe.co[0] for fcurve in anim_action.fcurves for keyframe in fcurve.keyframe_points])
-        bpy.context.scene.frame_set(int(last_frame))
-        loc_y_last = obj.pose.bones["foot_ik.L"].location[1]
-        loc_y_last = abs(round(loc_y_last, 6))
-        
-        total = (loc_y_1 + loc_y_last) * 2
-        
-        if not anim_action or not current_action:
-            print("Belirtilen action'lar bulunamadı.")
+        else:
             return {'CANCELLED'}
-
-        for fcurve in anim_action.fcurves:
-            group_name = fcurve.group.name if fcurve.group else None
-
-            target_fcurve = current_action.fcurves.find(fcurve.data_path, index=fcurve.array_index)
-            if not target_fcurve:
-                target_fcurve = current_action.fcurves.new(data_path=fcurve.data_path, index=fcurve.array_index)
-            
-            if group_name:
-                if group_name not in current_action.groups:
-                    new_group = current_action.groups.new(name=group_name)
-                target_fcurve.group = current_action.groups[group_name]
-
-            for keyframe in fcurve.keyframe_points:
-                new_keyframe = target_fcurve.keyframe_points.insert(keyframe.co.x + current_frame - 1, keyframe.co.y)
-                new_keyframe.interpolation = keyframe.interpolation
-
-            for keyframe in fcurve.keyframe_points:
-                new_keyframe_x = keyframe.co.x + current_frame - 1
-                if 0 <= new_keyframe_x < len(target_fcurve.keyframe_points):
-                    new_keyframe = target_fcurve.keyframe_points[int(new_keyframe_x)]
-                    new_keyframe.handle_left_type = keyframe.handle_left_type
-                    new_keyframe.handle_right_type = keyframe.handle_right_type
-
-        bpy.context.scene.frame_set(current_frame)
-        bpy.context.view_layer.update()
+        
+    first_locations = bone.location[:]
+    if len(bone.rotation_mode) == 3:
+        first_rotations = bone.rotation_euler[:]
+    elif bone.rotation_mode == "QUATERNION":
+        first_rotations = bone.rotation_quaternion[:]
+    first_scales = bone.scale[:]
+        
+    if obj.animation_data.action is not None:
+        current_action = obj.animation_data.action
+    else:
+        actions_list = [i.name for i in bpy.data.actions]
+        count = 1
+        temp_name = "New Action"
+        while temp_name in actions_list:
+            temp_name = "New Action " + str(count)
+            count += 1
+        bpy.data.actions.new(name=temp_name)
+        current_action = bpy.data.actions[temp_name]
         obj.animation_data.action = current_action
         
-        bone.location = first_locations
-        if len(bone.rotation_mode) == 3:
-            bone.rotation_euler = first_rotations
-            bone.keyframe_insert(data_path="rotation_euler", frame=current_frame, group=bone.name)
-        elif bone.rotation_mode == "QUATERNION":
-            bone.rotation_quaternion = first_rotations
-            bone.keyframe_insert(data_path="rotation_quaternion", frame=current_frame, group=bone.name)
-        bone.scale = first_scales
-        bone.keyframe_insert(data_path="location", frame=current_frame, group=bone.name)
-        bone.keyframe_insert(data_path="scale", frame=current_frame, group=bone.name)
-        
-        bpy.context.scene.frame_set(current_frame+int(last_frame)-1)
-        bone.location[1] = -total + (first_locations[1])
-        bone.keyframe_insert(data_path="location", frame=current_frame+last_frame-1, group=bone.name)
-        bone.keyframe_insert(data_path="scale", frame=current_frame+last_frame-1, group=bone.name)
-        if len(bone.rotation_mode) == 3:
-            bone.keyframe_insert(data_path="rotation_euler", frame=current_frame+last_frame-1, group=bone.name)
-        elif bone.rotation_mode == "QUATERNION":
-            bone.keyframe_insert(data_path="rotation_quaternion", frame=current_frame+last_frame-1, group=bone.name)
+    obj.animation_data.action = anim_action
             
-        action = obj.animation_data.action
-        for fcurve in action.fcurves:
-            if fcurve.data_path == f'pose.bones["{bone.name}"].location':
-                for keyframe in fcurve.keyframe_points:
-                    if keyframe.co.x == current_frame or keyframe.co.x == current_frame+int(last_frame)-1:
-                        keyframe.interpolation = 'LINEAR'
-                        
-        for fcurve in action.fcurves:
-            if fcurve.data_path == f'pose.bones["{bone.name}"].location' and fcurve.array_index == 1:
-                fcurve.extrapolation = 'LINEAR'
-                break
+    armature.collections_all["Root"].is_visible = True
+    bpy.ops.object.mode_set(mode='POSE')
+    
+    pose_bone = obj.pose.bones.get(bone.name)  
+    bpy.ops.pose.select_all(action='DESELECT')
+    obj.data.bones[bone.name].select = True
+    obj.data.bones.active = obj.data.bones[bone.name]
         
-        if anim_action_name in bpy.data.actions:
-            bpy.data.actions.remove(bpy.data.actions[anim_action_name])
-        bpy.context.scene.frame_set(current_frame)
-        bpy.ops.object.mode_set(mode='OBJECT') 
+    bpy.context.scene.frame_set(1)
+    loc_y_1 = obj.pose.bones["foot_ik.L"].location[1]
+    loc_y_1 = abs(round(loc_y_1, 6))
+    
+    last_frame = max([keyframe.co[0] for fcurve in anim_action.fcurves for keyframe in fcurve.keyframe_points])
+    bpy.context.scene.frame_set(int(last_frame))
+    loc_y_last = obj.pose.bones["foot_ik.L"].location[1]
+    loc_y_last = abs(round(loc_y_last, 6))
+    
+    total = (loc_y_1 + loc_y_last) * 2
+    
+    if not anim_action or not current_action:
+        self.report({'ERROR'}, f"Actionlar bulunurken bir hata olustu.")
+        return {'CANCELLED'}
+
+    for fcurve in anim_action.fcurves:
+        group_name = fcurve.group.name if fcurve.group else None
+
+        target_fcurve = current_action.fcurves.find(fcurve.data_path, index=fcurve.array_index)
+        if not target_fcurve:
+            target_fcurve = current_action.fcurves.new(data_path=fcurve.data_path, index=fcurve.array_index)
         
+        if group_name:
+            if group_name not in current_action.groups:
+                new_group = current_action.groups.new(name=group_name)
+            target_fcurve.group = current_action.groups[group_name]
+
+        for keyframe in fcurve.keyframe_points:
+            new_keyframe = target_fcurve.keyframe_points.insert(keyframe.co.x + current_frame - 1, keyframe.co.y)
+            new_keyframe.interpolation = keyframe.interpolation
+
+        for keyframe in fcurve.keyframe_points:
+            new_keyframe_x = keyframe.co.x + current_frame - 1
+            if 0 <= new_keyframe_x < len(target_fcurve.keyframe_points):
+                new_keyframe = target_fcurve.keyframe_points[int(new_keyframe_x)]
+                new_keyframe.handle_left_type = keyframe.handle_left_type
+                new_keyframe.handle_right_type = keyframe.handle_right_type
+
+    bpy.context.scene.frame_set(current_frame)
+    bpy.context.view_layer.update()
+    obj.animation_data.action = current_action
+    
+    bone.location = first_locations
+    if len(bone.rotation_mode) == 3:
+        bone.rotation_euler = first_rotations
+        bone.keyframe_insert(data_path="rotation_euler", frame=current_frame, group=bone.name)
+    elif bone.rotation_mode == "QUATERNION":
+        bone.rotation_quaternion = first_rotations
+        bone.keyframe_insert(data_path="rotation_quaternion", frame=current_frame, group=bone.name)
+    bone.scale = first_scales
+    bone.keyframe_insert(data_path="location", frame=current_frame, group=bone.name)
+    bone.keyframe_insert(data_path="scale", frame=current_frame, group=bone.name)
+    
+    bpy.context.scene.frame_set(current_frame+int(last_frame)-1)
+    bone.location[1] = -total + (first_locations[1])
+    bone.keyframe_insert(data_path="location", frame=current_frame+last_frame-1, group=bone.name)
+    bone.keyframe_insert(data_path="scale", frame=current_frame+last_frame-1, group=bone.name)
+    if len(bone.rotation_mode) == 3:
+        bone.keyframe_insert(data_path="rotation_euler", frame=current_frame+last_frame-1, group=bone.name)
+    elif bone.rotation_mode == "QUATERNION":
+        bone.keyframe_insert(data_path="rotation_quaternion", frame=current_frame+last_frame-1, group=bone.name)
+        
+    action = obj.animation_data.action
+    for fcurve in action.fcurves:
+        if fcurve.data_path == f'pose.bones["{bone.name}"].location':
+            for keyframe in fcurve.keyframe_points:
+                if keyframe.co.x == current_frame or keyframe.co.x == current_frame+int(last_frame)-1:
+                    keyframe.interpolation = 'LINEAR'
+                    
+    for fcurve in action.fcurves:
+        if fcurve.data_path == f'pose.bones["{bone.name}"].location' and fcurve.array_index == 1:
+            fcurve.extrapolation = 'LINEAR'
+            break
+    
+    bpy.context.scene.frame_set(current_frame)
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+class MP_MT_Action_Menu(Menu):
+    bl_label = "Actionlar"
+    bl_idname = "mp.action_menu"
+
+    def draw(self, context):
+        layout = self.layout
+        
+        for action in bpy.data.actions:
+            if action.name in character_actions:
+                op = layout.operator("mp.set_action", text=action.name)
+                op.action = action.name 
+
+def kontrol():
+    a = bpy.context.active_object
+    if a.type == 'ARMATURE':
+        obj = a
+        armature = obj.data
+        
+        for bone in obj.pose.bones:
+            if bone.name.startswith("root") and len(bone.name) > 4:
+                bone = obj.pose.bones[bone.name]
+                break                
+        else:
+            if 'root' in obj.pose.bones:
+                bone = obj.pose.bones['root']
+        
+        for cons in bone.constraints:
+            if cons.influence == 1.0:
+                return "path"
+        
+        return "duz"
+
+class MP_OT_SetAction(Operator):
+    bl_idname = "mp.set_action"
+    bl_label = "Action Uygulanacak!"
+    action: StringProperty()
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text=f"'{self.action}' uygulanacak.")
+        layout.label(text="Emin misiniz?")
+
+    def execute(self, context):
+        action = bpy.data.actions[self.action]
+        action_name = self.action
+        
+        control = kontrol()
+        if control == "duz":
+            duz_yurume_uygula(action_name)
+        elif control == "path":
+            ret = path_yurume(action_name)
+            if ret == "curve tools addon":
+                self.report({'ERROR'}, f'Curve Tools addonu yüklenemedi!')
+        else:
+            self.report({'ERROR'}, f'Belirlemede bir hata olustu!')
+            return {'CANCELLED'}
+        
+        self.report({'INFO'}, f'"{self.action}" uygulandı.!')
         return {'FINISHED'}
+
 
 class MP_OT_CreatePath(Operator):
     bl_idname = "mp.create_path"
@@ -478,9 +564,13 @@ class MP_OT_CreatePath(Operator):
             temp_a = obj.pose.bones[a]
             temp_a.bone.select = True
             obj.data.bones.active = obj.data.bones[a]
+            if a == bone.name:
+                bone.location[1] = 0
             temp_a.keyframe_insert(data_path="location", frame=current_frame-1, group=a)
-            temp_a.keyframe_insert(data_path="rotation_euler", frame=current_frame-1, group=a)
-            temp_a.keyframe_insert(data_path="rotation_quaternion", frame=current_frame-1, group=a)
+            if len(obj.rotation_mode) == 3:
+                temp_a.keyframe_insert(data_path="rotation_euler", frame=current_frame-1, group=a)
+            elif obj.rotation_mode == 'QUATERNION':
+                temp_a.keyframe_insert(data_path="rotation_quaternion", frame=current_frame-1, group=a)
             temp_a.keyframe_insert(data_path="scale", frame=current_frame-1, group=a)
         
         for a in bones:
@@ -490,8 +580,10 @@ class MP_OT_CreatePath(Operator):
             obj.data.bones.active = obj.data.bones[a]
             bpy.ops.pose.transforms_clear()
             temp_a.keyframe_insert(data_path="location", frame=current_frame, group=a)
-            temp_a.keyframe_insert(data_path="rotation_euler", frame=current_frame, group=a)
-            temp_a.keyframe_insert(data_path="rotation_quaternion", frame=current_frame, group=a)
+            if len(obj.rotation_mode) == 3:
+                temp_a.keyframe_insert(data_path="rotation_euler", frame=current_frame, group=a)
+            elif obj.rotation_mode == 'QUATERNION':
+                temp_a.keyframe_insert(data_path="rotation_quaternion", frame=current_frame, group=a)
             temp_a.keyframe_insert(data_path="scale", frame=current_frame, group=a)
 
         bone.bone.select = True
@@ -504,180 +596,162 @@ class MP_OT_CreatePath(Operator):
         
         return {'FINISHED'}
 
-class MP_OT_FollowPath(Operator, ImportHelper):
-    bl_idname = "mp.follow_path"
-    bl_label = "Path'e Bağla"
+def path_yurume(act_name):
+    current_frame = bpy.context.scene.frame_current
+    obj = bpy.context.active_object
 
-    filepath: StringProperty(subtype="FILE_PATH")
+    if obj.type != "ARMATURE":
+        return {'CANCELLED'}
+    else:
+        armature = obj.data
+        
+    if obj is not None:
+        if obj.animation_data.action is not None:
+            current_action = obj.animation_data.action
+        else:
+            actions_list = [i.name for i in bpy.data.actions]
+            count = 1
+            temp_name = "New Action"
+            while temp_name in actions_list:
+                temp_name = "New Action " + str(count)
+                count += 1
+            bpy.data.actions.new(name=temp_name)
+            current_action = bpy.data.actions[temp_name]
+            obj.animation_data.action = current_action
+    else:
+        return {'CANCELLED'}
 
-    def execute(self, context):
+    if act_name in bpy.data.actions:
+        anim_action = bpy.data.actions[act_name]
+    
+    obj.animation_data.action = anim_action
+        
+    armature.collections_all["Root"].is_visible = True
+    bpy.ops.object.mode_set(mode='POSE')
+    
+    for a in obj.data.bones:
+        a.select = False
+    
+    for bone in obj.pose.bones:
+        if bone.name.startswith("root") and len(bone.name) > 4:
+            bone = obj.pose.bones[bone.name]
+            break
+    else:
+        if 'root' in obj.pose.bones:
+            bone = obj.pose.bones['root']
+        else:
+            return {'CANCELLED'}
+    pose_bone = obj.pose.bones.get(bone.name)  
+    bpy.ops.pose.select_all(action='DESELECT')
+    obj.data.bones[bone.name].select = True
+    obj.data.bones.active = obj.data.bones[bone.name]
+        
+    bpy.context.scene.frame_set(1)
+    loc_y_1 = bpy.context.object.pose.bones["foot_ik.L"].location[1]
+    loc_y_1 = abs(round(loc_y_1, 6))
+    
+    last_frame = max([keyframe.co[0] for fcurve in anim_action.fcurves for keyframe in fcurve.keyframe_points])
+    bpy.context.scene.frame_set(int(last_frame))
+    loc_y_last = bpy.context.object.pose.bones["foot_ik.L"].location[1]
+    loc_y_last = abs(round(loc_y_last, 6))
+    
+    total = (loc_y_1 + loc_y_last) * 2
+    
+    if not anim_action or not current_action:
+        print("Belirtilen action'lar bulunamadı.")
+        return {'CANCELLED'}
+
+    for fcurve in anim_action.fcurves:
+        target_fcurve = current_action.fcurves.find(fcurve.data_path, index=fcurve.array_index)
+        if not target_fcurve:
+            target_fcurve = current_action.fcurves.new(data_path=fcurve.data_path, index=fcurve.array_index)
+        
+        for keyframe in fcurve.keyframe_points:
+            new_keyframe = target_fcurve.keyframe_points.insert(keyframe.co.x + current_frame - 1, keyframe.co.y)
+            new_keyframe.interpolation = keyframe.interpolation
+        
+        for keyframe in fcurve.keyframe_points:
+            new_keyframe_x = keyframe.co.x + current_frame - 1
+            if 0 <= new_keyframe_x < len(target_fcurve.keyframe_points):
+                new_keyframe = target_fcurve.keyframe_points[int(new_keyframe_x)]
+                new_keyframe.handle_left_type = keyframe.handle_left_type
+                new_keyframe.handle_right_type = keyframe.handle_right_type
+            else:
+                print(f"Index {int(new_keyframe_x)} geçersiz, keyframe eklenmedi.")
+
+    bpy.context.scene.frame_set(current_frame)
+    bpy.context.view_layer.update()
+    
+    obj.animation_data.action = current_action
+    bpy.context.scene.frame_set(current_frame)
+    
+    offset_value = - ((48.53 * total) + 1.625)
+    
+    constraint_path = None
+    for fcurve in current_action.fcurves:
+        if fcurve.data_path.endswith("influence") and bone.name in fcurve.data_path:
+            keyframes = [kp.co.x for kp in fcurve.keyframe_points]
+            if len(keyframes) == 4:
+                if keyframes[1] <= current_frame <= keyframes[2]:
+                    constraint_path = fcurve.data_path
+            elif len(keyframes) == 2:
+                if keyframes[1] <= current_frame:
+                    constraint_path = fcurve.data_path
+            else:
+                self.report({'WARNING'}, "Path bağlanırken bir sorun oluştu, animasyonunuzu kontrol ediniz!")
+                
+    if constraint_path is not None:
+        constraint_name_mtch = re.search(r'constraints\["([^"]+)"\]', constraint_path)
+        constraint_name = constraint_name_mtch.group(1)
+        constraint = bone.constraints[constraint_name]
+    
+    curve = constraint.target
+    for bone in bpy.context.selected_pose_bones:
+        bone.bone.select = False
+    bpy.context.view_layer.update()
+    curve.select_set(True)
+    bpy.context.view_layer.objects.active = curve
+    
+    if "bl_ext.blender_org.curve_tools" not in bpy.context.preferences.addons:
         bpy.ops.extensions.package_install(repo_index=0, pkg_id="curve_tools")
-        
-        bpy.ops.preferences.addon_enable(module="bl_ext.blender_org.curve_tools")
-        current_frame = bpy.context.scene.frame_current
-        obj = bpy.context.active_object
     
-        if obj.type != "ARMATURE":
-            return {'CANCELLED'}
-        else:
-            armature = obj.data
-            
-        if obj is not None:
-            if obj.animation_data.action is not None:
-                current_action = obj.animation_data.action
-            else:
-                actions_list = [i.name for i in bpy.data.actions]
-                count = 1
-                temp_name = "New Action"
-                while temp_name in actions_list:
-                    temp_name = "New Action " + str(count)
-                    count += 1
-                bpy.data.actions.new(name=temp_name)
-                current_action = bpy.data.actions[temp_name]
-                obj.animation_data.action = current_action
-        else:
-            return {'CANCELLED'}
-        
-        with bpy.data.libraries.load(self.filepath, link=False) as (data_from, data_to):
-            for action in data_from.actions:
-                anim_action_name = action
-                data_to.actions.append(action)
-                break
-
-        if anim_action_name in bpy.data.actions:
-            anim_action = bpy.data.actions[anim_action_name]
-        
-        obj.animation_data.action = anim_action
-            
-        armature.collections_all["Root"].is_visible = True
-        bpy.ops.object.mode_set(mode='POSE')
-        
-        for a in obj.data.bones:
-            a.select = False
-        
-        for bone in obj.pose.bones:
-            if bone.name.startswith("root") and len(bone.name) > 4:
-                bone = obj.pose.bones[bone.name]
-                break
-        else:
-            if 'root' in obj.pose.bones:
-                bone = obj.pose.bones['root']
-            else:
-                return {'CANCELLED'}
-        pose_bone = obj.pose.bones.get(bone.name)  
-        bpy.ops.pose.select_all(action='DESELECT')
-        obj.data.bones[bone.name].select = True
-        obj.data.bones.active = obj.data.bones[bone.name]
-            
-        bpy.context.scene.frame_set(1)
-        loc_y_1 = bpy.context.object.pose.bones["foot_ik.L"].location[1]
-        loc_y_1 = abs(round(loc_y_1, 6))
-        
-        last_frame = max([keyframe.co[0] for fcurve in anim_action.fcurves for keyframe in fcurve.keyframe_points])
-        bpy.context.scene.frame_set(int(last_frame))
-        loc_y_last = bpy.context.object.pose.bones["foot_ik.L"].location[1]
-        loc_y_last = abs(round(loc_y_last, 6))
-        
-        total = (loc_y_1 + loc_y_last) * 2
-        
-        if not anim_action or not current_action:
-            print("Belirtilen action'lar bulunamadı.")
-            return {'CANCELLED'}
-
-        for fcurve in anim_action.fcurves:
-            target_fcurve = current_action.fcurves.find(fcurve.data_path, index=fcurve.array_index)
-            if not target_fcurve:
-                target_fcurve = current_action.fcurves.new(data_path=fcurve.data_path, index=fcurve.array_index)
-            
-            for keyframe in fcurve.keyframe_points:
-                new_keyframe = target_fcurve.keyframe_points.insert(keyframe.co.x + current_frame - 1, keyframe.co.y)
-                new_keyframe.interpolation = keyframe.interpolation
-            
-            for keyframe in fcurve.keyframe_points:
-                new_keyframe_x = keyframe.co.x + current_frame - 1
-                if 0 <= new_keyframe_x < len(target_fcurve.keyframe_points):
-                    new_keyframe = target_fcurve.keyframe_points[int(new_keyframe_x)]
-                    new_keyframe.handle_left_type = keyframe.handle_left_type
-                    new_keyframe.handle_right_type = keyframe.handle_right_type
-                else:
-                    print(f"Index {int(new_keyframe_x)} geçersiz, keyframe eklenmedi.")
-
-        bpy.context.scene.frame_set(current_frame)
-        bpy.context.view_layer.update()
-        
-        obj.animation_data.action = current_action
-        bpy.context.scene.frame_set(current_frame)
-        
-        offset_value = - ((48.53 * total) + 1.625)
-        
-        constraint_path = None
-        for fcurve in current_action.fcurves:
-            if fcurve.data_path.endswith("influence") and bone.name in fcurve.data_path:
-                keyframes = [kp.co.x for kp in fcurve.keyframe_points]
-                if len(keyframes) == 4:
-                    if keyframes[1] <= current_frame <= keyframes[2]:
-                        constraint_path = fcurve.data_path
-                elif len(keyframes) == 2:
-                    if keyframes[1] <= current_frame:
-                        constraint_path = fcurve.data_path
-                else:
-                    self.report({'WARNING'}, "Path bağlanırken bir sorun oluştu, animasyonunuzu kontrol ediniz!")
-                    
-        if constraint_path is not None:
-            constraint_name_mtch = re.search(r'constraints\["([^"]+)"\]', constraint_path)
-            constraint_name = constraint_name_mtch.group(1)
-            constraint = bone.constraints[constraint_name]
-        
-        curve = constraint.target
-        for bone in bpy.context.selected_pose_bones:
-            bone.bone.select = False
-        bpy.context.view_layer.update()
-        curve.select_set(True)
-        bpy.context.view_layer.objects.active = curve
-        bpy.ops.curvetools.operatorcurvelength()
-        curve_len = bpy.context.scene.curvetools.CurveLength
-        half_curve_len = curve_len/ 2.08248
-        
-        offset_value = offset_value / half_curve_len
-        
-        bpy.ops.object.select_all(action='DESELECT')
-        obj.select_set(True)
-        bpy.context.view_layer.objects.active = obj
-        
-        
-        bpy.context.scene.frame_set(current_frame)
-        constraint.offset = 0
-        constraint.keyframe_insert(data_path="offset", frame=current_frame, group=bone.name)
-        
-        bpy.context.scene.frame_set(current_frame + 24)
-        constraint.offset = offset_value
-        constraint.keyframe_insert(data_path="offset", frame=current_frame + 24, group=bone.name) 
-        
-        action = obj.animation_data.action
-        fcurve = None
-        for fc in action.fcurves:
-            if fc.data_path == f'pose.bones["{bone.name}"].constraints["{constraint.name}"].offset':
-                fcurve = fc
-                break
-
-        if fcurve is not None:
-            for keyframe in fcurve.keyframe_points:
-                if keyframe.co[0] in {current_frame, current_frame+24}:
-                    keyframe.interpolation = 'LINEAR'
-            fcurve.extrapolation = 'LINEAR'
-        
-        bpy.context.scene.frame_set(current_frame)
-        bpy.ops.object.mode_set(mode='OBJECT')
-        
-        bpy.ops.preferences.addon_disable(module="bl_ext.blender_org.curve_tools")
-        
-        if anim_action_name in bpy.data.actions:
-            bpy.data.actions.remove(bpy.data.actions[anim_action_name])
-        
-        return {'FINISHED'}
+    bpy.ops.preferences.addon_enable(module="bl_ext.blender_org.curve_tools")
+    bpy.ops.curvetools.operatorcurvelength()
+    curve_len = bpy.context.scene.curvetools.CurveLength
+    half_curve_len = curve_len/ 2.08248
     
-def menu_func(self, context):
-    self.layout.operator(MP_OT_FollowPath.bl_idname)
+    offset_value = offset_value / half_curve_len
+    
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    
+    
+    bpy.context.scene.frame_set(current_frame)
+    constraint.offset = 0
+    constraint.keyframe_insert(data_path="offset", frame=current_frame, group=bone.name)
+    
+    bpy.context.scene.frame_set(current_frame + 24)
+    constraint.offset = offset_value
+    constraint.keyframe_insert(data_path="offset", frame=current_frame + 24, group=bone.name) 
+    
+    action = obj.animation_data.action
+    fcurve = None
+    for fc in action.fcurves:
+        if fc.data_path == f'pose.bones["{bone.name}"].constraints["{constraint.name}"].offset':
+            fcurve = fc
+            break
+
+    if fcurve is not None:
+        for keyframe in fcurve.keyframe_points:
+            if keyframe.co[0] in {current_frame, current_frame+24}:
+                keyframe.interpolation = 'LINEAR'
+        fcurve.extrapolation = 'LINEAR'
+    
+    bpy.context.scene.frame_set(current_frame)
+    bpy.ops.object.mode_set(mode='OBJECT')
+    
+    bpy.ops.preferences.addon_disable(module="bl_ext.blender_org.curve_tools")
 
 class MP_OT_BreakPath(Operator):
     bl_idname = "mp.break_path"
@@ -803,6 +877,9 @@ class MP_OT_RootMove(Operator):
             else:
                 return {'CANCELLED'}
         
+        if 'root' in obj.pose.bones:
+            small_root_bone = obj.pose.bones['root']
+                
         armature.collections_all["Root"].is_visible = True
         
         root_bone.bone.select = True
@@ -815,7 +892,25 @@ class MP_OT_RootMove(Operator):
             self.report({'ERROR'}, "Karakter konumu için kemik bulunamadı!")
             return {'CANCELLED'}
         
-        bone_names = ["torso", "foot_ik.L", "foot_ik.R", root_bone.name]
+        if obj.location[:] != (0,0,0):
+            obj.keyframe_insert(data_path="location", frame=current_frame-1, group="Object Transform")
+            if len(obj.rotation_mode) == 3:
+                obj.keyframe_insert(data_path="rotation_euler", frame=current_frame-1, group="Object Transform")
+            elif obj.rotation_mode == 'QUATERNION':
+                obj.keyframe_insert(data_path="rotation_quaternion", frame=current_frame-1, group="Object Transform")
+            obj.keyframe_insert(data_path="scale", frame=current_frame-1, group="Object Transform")
+            
+            obj.location = (0,0,0)
+            obj.keyframe_insert(data_path="location", frame=current_frame, group="Object Transform")
+            if len(obj.rotation_mode) == 3:
+                obj.rotation_euler = (0,0,0)
+                obj.keyframe_insert(data_path="rotation_euler", frame=current_frame, group="Object Transform")
+            elif obj.rotation_mode == 'QUATERNION':
+                obj.rotation_quaternion = (1,0,0,0)
+                obj.keyframe_insert(data_path="rotation_quaternion", frame=current_frame, group="Object Transform")
+            obj.keyframe_insert(data_path="scale", frame=current_frame, group="Object Transform")
+            
+        bone_names = ["torso", "foot_ik.L", "foot_ik.R", root_bone.name, small_root_bone.name]
         for b_name in bone_names:
             temp_bone = obj.pose.bones[b_name]
             temp_bone.keyframe_insert(data_path="location", frame=current_frame-1, group=b_name)
@@ -829,16 +924,18 @@ class MP_OT_RootMove(Operator):
         world_matrix = obj.matrix_world @ center_bone.matrix
         global_location = world_matrix @ center_bone.bone.head
         root_bone.location = global_location[:]
+        small_root_bone.location = (0,0,0)
         
-        temp_bone = root_bone
-        temp_bone.keyframe_insert(data_path="location", frame=current_frame, group=temp_bone.name)
-        if len(temp_bone.rotation_mode) == 3:
-            temp_bone.keyframe_insert(data_path="rotation_euler", frame=current_frame, group=temp_bone.name)
-        elif temp_bone.rotation_mode == "QUATERNION":
-            temp_bone.keyframe_insert(data_path="rotation_quaternion", frame=current_frame, group=temp_bone.name)
-        temp_bone.keyframe_insert(data_path="scale", frame=current_frame, group=temp_bone.name)
+        for b_name in bone_names[-2:]:
+            temp_bone = obj.pose.bones[b_name]
+            temp_bone.keyframe_insert(data_path="location", frame=current_frame, group=temp_bone.name)
+            if len(temp_bone.rotation_mode) == 3:
+                temp_bone.keyframe_insert(data_path="rotation_euler", frame=current_frame, group=temp_bone.name)
+            elif temp_bone.rotation_mode == "QUATERNION":
+                temp_bone.keyframe_insert(data_path="rotation_quaternion", frame=current_frame, group=temp_bone.name)
+            temp_bone.keyframe_insert(data_path="scale", frame=current_frame, group=temp_bone.name)
         
-        for a in bone_names[:-1]:
+        for a in bone_names[:-2]:
             temp_a = obj.pose.bones[a]
             temp_a.bone.select = True
             obj.data.bones.active = obj.data.bones[a]
@@ -851,7 +948,7 @@ class MP_OT_RootMove(Operator):
         bpy.context.scene.frame_set(current_frame)
         
         return {'FINISHED'}
-"""
+
 ############################ Action Editor Operations ############################
 
 class MP_MT_DeleteActionsMenu(Menu):
@@ -986,8 +1083,8 @@ classes = (
     MP_PT_LinkOperations, MP_OT_FindFilePaths, MP_OT_KarakterRigi, MP_OT_ModelRigi, MP_OT_RelationsMake,
     
     # Animation Operations
-    #MP_PT_AnimationOperations, MP_OT_WalkingStraight, MP_OT_CreatePath, 
-    #MP_OT_FollowPath, MP_OT_BreakPath, MP_OT_RootMove,
+    MP_PT_AnimationOperations, MP_OT_WalkingStraight, MP_MT_Action_Menu, MP_OT_SetAction, 
+    MP_OT_CreatePath, MP_OT_BreakPath, MP_OT_RootMove,
     
     # Action Editor Operations
     MP_MT_DeleteActionsMenu, MP_OT_DeleteActionConfirm, MP_OT_DeleteAction, 
@@ -1052,6 +1149,20 @@ def register():
 
     bpy.utils.register_class(DemoPreferences)
     
+    bpy.types.Scene.link_tabs = bpy.props.EnumProperty(
+        items=[('TAB1', "Karakter", ""),
+               ('TAB2', "Model", ""),
+               ('TAB3', "Shape Keys", "")],
+        name="Tab Sekmeleri"
+    )
+    
+    bpy.types.Scene.animation_tabs = bpy.props.EnumProperty(
+        items=[('TAB1', "Düz", ""),
+               ('TAB2', "Path", ""),
+               ('TAB3', "Root", "")],
+        name="Animasyon Sekmeleri"
+    )
+    
 def unregister():
 
     addon_updater_ops.unregister()
@@ -1062,6 +1173,9 @@ def unregister():
     bpy.types.DOPESHEET_HT_header.remove(draw_header)
 
     bpy.utils.unregister_class(DemoPreferences)
+    
+    del bpy.types.Scene.link_tabs
+    del bpy.types.Scene.animation_tabs
     
 if __name__ == "__main__":
     register()
