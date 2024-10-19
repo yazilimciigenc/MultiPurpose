@@ -3,7 +3,7 @@ bl_info = {
     'author': 'Yazılımcı Genç',
     'description': "Bismillah! Blender'da işlerimizi kolaylaştırmak amacıyla yazılmıştır.",
     'blender': (4, 2, 0),
-    'version': (1, 1, 5),
+    'version': (1, 1, 6),
     'location': 'View3D > Sidebar > Multi Purpose',
     'warning': '',
     'wiki_url': "",
@@ -18,6 +18,7 @@ from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper
 import os
 import re
+from pathlib import Path
 from . import addon_updater_ops
 
 ############################ Link Operations ############################
@@ -47,10 +48,21 @@ class MP_PT_LinkOperations(Panel):
             layout.operator("mp.relations_make", text="Shape Keys Aktif Et", icon="SHAPEKEY_DATA")
 
 def find_file(folder_path, file_name):
+    
+    character_names = ["Aykut", "Büşra", "Cemile Teyze", "Dr. Arif Aydın", "Elif", "Emir", 
+                        "Esma", "Fatih", "Halil", "Musab", "Ömer", "Orhan", "Yakup"]
+    character_file_names = [str(i)+".blend" for i in character_names]
+    
     for root, dirs, files in os.walk(folder_path):
-        if file_name in files:
+        if file_name in character_file_names:
+            if "Ana Karakterler" in root and file_name in files:
+                return os.path.join(root, file_name)
+        elif file_name in files:
             return os.path.join(root, file_name)
     return None
+
+def get_desktop_path():
+    return str(Path.home() / "Desktop")
 
 class MP_OT_FindFilePaths(Operator):
     bl_idname = "mp.find_file_paths"
@@ -79,7 +91,14 @@ class MP_OT_FindFilePaths(Operator):
                     library.filepath = result
                 else:
                     print("Dosya bulunamadı.")
-            bpy.ops.wm.save_mainfile()
+             
+            if bpy.data.filepath:
+                bpy.ops.wm.save_mainfile()
+            else:
+                
+                new_file_path = os.path.join(get_desktop_path(), "animasyon_projesi_mp.blend")
+                bpy.ops.wm.save_as_mainfile(filepath=new_file_path)
+            
             bpy.ops.wm.revert_mainfile()
         
         return {'FINISHED'}
@@ -95,10 +114,10 @@ class MP_OT_KarakterRigi(Operator):
 
     def execute(self, context):
         try:
+            bpy.ops.object.make_override_library()
+            
             selected_objects = bpy.context.selected_objects
             object_name = selected_objects[0].name.split()[0]
-            
-            bpy.ops.object.make_override_library()
             
             harfler = {"ü":"U", "i":"I", "ş":"S", "ö":"O", "ç":"C", "ğ":"G"}
             for key, value in harfler.items():
@@ -124,11 +143,26 @@ class MP_OT_ModelRigi(Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
+        
         try:
+            bpy.ops.object.make_override_library()
+            
             selected_objects = bpy.context.selected_objects
             object_name = selected_objects[0].name.split()[0]
             
-            bpy.ops.object.make_override_library()
+            harfler = {"ü":"U", "i":"I", "ş":"S", "ö":"O", "ç":"C", "ğ":"G"}
+            for key, value in harfler.items():
+                object_name = object_name.replace(key, value)
+            
+            for object in bpy.data.objects:
+                if object.type == "ARMATURE" and object_name.upper() in object.name:
+                    bpy.ops.object.select_all(action='DESELECT')
+                    obj = bpy.data.objects.get(object.name)
+                    obj.select_set(True)
+                    bpy.context.view_layer.objects.active = obj
+                    
+                    bpy.ops.object.make_local(type='SELECT_OBJECT')
+                    break
         except:
             pass
         
