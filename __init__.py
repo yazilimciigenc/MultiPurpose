@@ -3,7 +3,7 @@ bl_info = {
     'author': 'Yazılımcı Genç',
     'description': "Bismillah! Blender'da işlerimizi kolaylaştırmak amacıyla yazılmıştır.",
     'blender': (4, 2, 0),
-    'version': (1, 1, 6),
+    'version': (1, 1, 7),
     'location': 'View3D > Sidebar > Multi Purpose',
     'warning': '',
     'wiki_url': "",
@@ -113,28 +113,21 @@ class MP_OT_KarakterRigi(Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
+        
         try:
             bpy.ops.object.make_override_library()
-            
-            selected_objects = bpy.context.selected_objects
-            object_name = selected_objects[0].name.split()[0]
-            
-            harfler = {"ü":"U", "i":"I", "ş":"S", "ö":"O", "ç":"C", "ğ":"G"}
-            for key, value in harfler.items():
-                object_name = object_name.replace(key, value)
-            
-            for object in bpy.data.objects:
-                if object.type == "ARMATURE" and object_name.upper() in object.name:
-                    bpy.ops.object.select_all(action='DESELECT')
-                    obj = bpy.data.objects.get(object.name)
-                    obj.select_set(True)
-                    bpy.context.view_layer.objects.active = obj
-                    
-                    bpy.ops.object.make_local(type='SELECT_OBJECT')
-                    break
         except:
             pass
         
+        try:
+            bpy.ops.object.make_local(type='SELECT_OBDATA_MATERIAL')
+        except:
+            try:
+                bpy.ops.object.make_local(type='SELECT_OBDATA_MATERIAL')
+            except:
+                pass
+            pass
+    
         return {'FINISHED'}
     
 class MP_OT_ModelRigi(Operator):
@@ -146,24 +139,16 @@ class MP_OT_ModelRigi(Operator):
         
         try:
             bpy.ops.object.make_override_library()
-            
-            selected_objects = bpy.context.selected_objects
-            object_name = selected_objects[0].name.split()[0]
-            
-            harfler = {"ü":"U", "i":"I", "ş":"S", "ö":"O", "ç":"C", "ğ":"G"}
-            for key, value in harfler.items():
-                object_name = object_name.replace(key, value)
-            
-            for object in bpy.data.objects:
-                if object.type == "ARMATURE" and object_name.upper() in object.name:
-                    bpy.ops.object.select_all(action='DESELECT')
-                    obj = bpy.data.objects.get(object.name)
-                    obj.select_set(True)
-                    bpy.context.view_layer.objects.active = obj
-                    
-                    bpy.ops.object.make_local(type='SELECT_OBJECT')
-                    break
         except:
+            pass
+        
+        try:
+            bpy.ops.object.make_local(type='SELECT_OBDATA_MATERIAL')
+        except:
+            try:
+                bpy.ops.object.make_local(type='SELECT_OBDATA_MATERIAL')
+            except:
+                pass
             pass
         
         return {'FINISHED'}
