@@ -3,7 +3,7 @@ bl_info = {
     'author': 'Yazılımcı Genç',
     'description': "Bismillah! Blender'da işlerimizi kolaylaştırmak amacıyla yazılmıştır.",
     'blender': (4, 2, 0),
-    'version': (1, 1, 7),
+    'version': (1, 1, 8),
     'location': 'View3D > Sidebar > Multi Purpose',
     'warning': '',
     'wiki_url': "",
@@ -911,7 +911,8 @@ class MP_OT_RootMove(Operator):
             self.report({'ERROR'}, "Karakter konumu için kemik bulunamadı!")
             return {'CANCELLED'}
         
-        if obj.location[:] != (0,0,0):
+        # Bu kısım hata verdiriyor object mode'a key atadığı için
+        """if obj.location[:] != (0,0,0):
             obj.keyframe_insert(data_path="location", frame=current_frame-1, group="Object Transform")
             if len(obj.rotation_mode) == 3:
                 obj.keyframe_insert(data_path="rotation_euler", frame=current_frame-1, group="Object Transform")
@@ -928,7 +929,7 @@ class MP_OT_RootMove(Operator):
                 obj.rotation_quaternion = (1,0,0,0)
                 obj.keyframe_insert(data_path="rotation_quaternion", frame=current_frame, group="Object Transform")
             obj.keyframe_insert(data_path="scale", frame=current_frame, group="Object Transform")
-            
+        """
         bone_names = ["torso", "foot_ik.L", "foot_ik.R", root_bone.name, small_root_bone.name]
         for b_name in bone_names:
             temp_bone = obj.pose.bones[b_name]
@@ -939,33 +940,46 @@ class MP_OT_RootMove(Operator):
                 temp_bone.keyframe_insert(data_path="rotation_quaternion", frame=current_frame-1, group=b_name)
             temp_bone.keyframe_insert(data_path="scale", frame=current_frame-1, group=b_name)
         
+        old_cursor_location = bpy.context.scene.cursor.location.copy()
         center_bone = location_bone
         world_matrix = obj.matrix_world @ center_bone.matrix
         global_location = world_matrix @ center_bone.bone.head
-        root_bone.location = global_location[:]
+        bpy.context.scene.cursor.location = global_location
+        current_cursor_location = bpy.context.scene.cursor.location.copy()
+
+        rig_matrix_world = obj.matrix_world
+        bone_global_matrix = rig_matrix_world @ root_bone.matrix
+        bone_global_matrix.translation = current_cursor_location
+        root_bone.matrix = rig_matrix_world.inverted() @ bone_global_matrix
         small_root_bone.location = (0,0,0)
+
+        bpy.context.scene.cursor.location = old_cursor_location[:]
         
-        for b_name in bone_names[-2:]:
+        for b_name in bone_names[:3]:
             temp_bone = obj.pose.bones[b_name]
+            temp_bone.location = (0.0, 0.0, 0.0)
             temp_bone.keyframe_insert(data_path="location", frame=current_frame, group=temp_bone.name)
             if len(temp_bone.rotation_mode) == 3:
+                temp_bone.rotation_euler = (0.0, 0.0, 0.0)
                 temp_bone.keyframe_insert(data_path="rotation_euler", frame=current_frame, group=temp_bone.name)
             elif temp_bone.rotation_mode == "QUATERNION":
+                temp_bone.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
                 temp_bone.keyframe_insert(data_path="rotation_quaternion", frame=current_frame, group=temp_bone.name)
+            temp_bone.scale = (1.0, 1.0, 1.0)
             temp_bone.keyframe_insert(data_path="scale", frame=current_frame, group=temp_bone.name)
         
-        for a in bone_names[:-2]:
+        for a in bone_names[-2:]:
             temp_a = obj.pose.bones[a]
             temp_a.bone.select = True
             obj.data.bones.active = obj.data.bones[a]
-            bpy.ops.pose.transforms_clear()
             temp_a.keyframe_insert(data_path="location", frame=current_frame, group=a)
-            temp_a.keyframe_insert(data_path="rotation_euler", frame=current_frame, group=a)
-            temp_a.keyframe_insert(data_path="rotation_quaternion", frame=current_frame, group=a)
+            if len(temp_a.rotation_mode) == 3:
+                temp_a.keyframe_insert(data_path="rotation_euler", frame=current_frame, group=a)
+            elif temp_a.rotation_mode == "QUATERNION":
+                temp_a.keyframe_insert(data_path="rotation_quaternion", frame=current_frame, group=a)
             temp_a.keyframe_insert(data_path="scale", frame=current_frame, group=a)
         
-        bpy.context.scene.frame_set(current_frame)
-        
+
         return {'FINISHED'}
 
 ############################ Action Editor Operations ############################
